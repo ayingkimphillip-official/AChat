@@ -52,6 +52,17 @@ class userService {
         }
     };
 
+    LogoutAccount = (socket) => {
+        for (let i = 0; i < this.loggedInAccounts.length; i++) {
+            if (this.loggedInAccounts[i].socket.remoteAddress == socket.remoteAddress &&
+                this.loggedInAccounts[i].socket.remotePort == socket.remotePort) {
+                this.loggedInAccounts.splice(i, 1);
+                return true;
+            }
+        }
+        return 'Not logged in';
+    };
+
     WhisperToAnotherUser = (socket, request) => {
         let senderRemoteAddress = socket.remoteAddress;
         let senderRemotePort = socket.remotePort;
@@ -73,7 +84,8 @@ class userService {
                     hasSent = true;
                 }
             }
-            return hasSent;
+            if (hasSent) return true;
+            return 'Invalid Reciever';
         }
         else {
             return 'Invalid Sender';

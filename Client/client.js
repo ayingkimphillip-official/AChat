@@ -5,16 +5,18 @@ const responseStatus = require('../Common/responseStatus');
 const clientCommands = require('./clientCommands');
 
 class Program {
-    DEBUG = false;
+    DEBUG = true;
     port = 1337;
     address = "127.0.0.1";
     socket;
     nonceReg = 1;
-    nonceLog = 1;
+    nonceLogin = 1;
+    nonceLogout = 1;
     nonceWhisp = 1;
     isConnected = false;
     callbackRegArray = [];
-    callbackLogArray = [];
+    callbackLoginArray = [];
+    callbackLogoutArray = [];
     callbackWhispArray = [];
     interface;
 
@@ -42,6 +44,9 @@ class Program {
                 case clientCommands.LOGIN:
                     this.LoginUser(params);
                     break;
+                case clientCommands.LOGOUT:
+                    this.LogoutUser(params);
+                    break;
                 case clientCommands.WHISPER:
                     this.WhisperToAnotherUser(params);
                     break;
@@ -68,10 +73,19 @@ class Program {
             }
         }
         else if (command == commands.LOGIN && response.length >= 3) {
-            for (let i = 0; i < this.callbackLogArray.length; i++) {
-                if (this.callbackLogArray[i].nonce == responseNonce) {
-                    this.callbackLogArray[i].callback(data);
-                    this.callbackLogArray.splice(i, 1);
+            for (let i = 0; i < this.callbackLoginArray.length; i++) {
+                if (this.callbackLoginArray[i].nonce == responseNonce) {
+                    this.callbackLoginArray[i].callback(data);
+                    this.callbackLoginArray.splice(i, 1);
+                    break;
+                }
+            }
+        }
+        else if (command == commands.LOGOUT && response.length >= 3) {
+            for (let i = 0; i < this.callbackLogoutArray.length; i++) {
+                if (this.callbackLogoutArray[i].nonce == responseNonce) {
+                    this.callbackLogoutArray[i].callback(data);
+                    this.callbackLogoutArray.splice(i, 1);
                     break;
                 }
             }
@@ -127,9 +141,9 @@ class Program {
             let username = params[1];
             let password = params[2];
 
-            this.socket.write(`${commands.LOGIN}/${this.nonceLog}/${username}/${password}`);
-            this.callbackLogArray.push({
-                nonce: this.nonceLog++,
+            this.socket.write(`${commands.LOGIN}/${this.nonceLogin}/${username}/${password}`);
+            this.callbackLoginArray.push({
+                nonce: this.nonceLogin++,
                 callback: this.LoginCallback
             });
         }
@@ -145,6 +159,34 @@ class Program {
             let displayResult = "Login ";
             if (result == responseStatus.SUCCESS) {
                 displayResult += "SUCCESSFUL!";
+            }
+            else {
+                displayResult += `FAILED: ${failureMessage}`;
+            }
+            console.log(displayResult);
+        }
+    };
+
+    LogoutUser = (params) => {
+        if (params.length == 1) {
+            this.socket.write(`${commands.LOGOUT}/${this.nonceLogout}`);
+            this.callbackLogoutArray.push({
+                nonce: this.nonceLogout++,
+                callback: this.LogoutCallback
+            });
+        }
+    };
+
+    LogoutCallback = (data) => {
+        let result = data.toString().split('/');
+        const command = parseInt(result[0]);
+        const failureMessage = result[3];
+        result = parseInt(result[2]);
+
+        if (command == commands.LOGOUT) {
+            let displayResult = "Logout ";
+            if (result == responseStatus.SUCCESS) {
+                displayResult += "SUCCESFFUL";
             }
             else {
                 displayResult += `FAILED: ${failureMessage}`;

@@ -32,6 +32,9 @@ class Program {
             case commands.LOGIN:
                 this.LoginAccount(socket, request);
                 break;
+            case commands.LOGOUT:
+                this.LogoutAccount(socket, request);
+                break;
             case commands.WHISPER:
                 this.WhisperToAnotherUser(socket, request);
                 break;
@@ -55,6 +58,15 @@ class Program {
             if (result == true)
                 socket.write(`${commands.LOGIN}/${request[1]}/${responseStatus.SUCCESS}`);
             else socket.write(`${commands.LOGIN}/${request[1]}/${responseStatus.FAILED}/${result}`);
+        }
+    };
+
+    LogoutAccount = (socket, request) => {
+        if (request.length == 2) {
+            let result = this.userService.LogoutAccount(socket);
+            if (result == true)
+                socket.write(`${commands.LOGOUT}/${request[1]}/${responseStatus.SUCCESS}`);
+            else socket.write(`${commands.LOGOUT}/${request[1]}/${responseStatus.FAILED}/${result}`);
         }
     };
 
