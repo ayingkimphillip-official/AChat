@@ -38,6 +38,9 @@ class Program {
             case commands.WHISPER:
                 this.WhisperToAnotherUser(socket, request);
                 break;
+            case commands.SUBSCRIBE:
+                this.SubscribeToGroupchat(socket, request);
+                break;
             default:
                 break;
         }
@@ -78,6 +81,13 @@ class Program {
             else socket.write(`${commands.WHISPER}/${request[1]}/${responseStatus.FAILED}/${result}`);
         }
     };
+
+    SubscribeToGroupchat = (socket, request) => {
+        if (request.length == 3) {
+            let result = this.userService.SubscribeToGroupchat(socket, request[2]);
+        }
+    };
+
 }
 
 (new Program()).Main();

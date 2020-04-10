@@ -13,6 +13,7 @@ class Program {
     nonceLogin = 1;
     nonceLogout = 1;
     nonceWhisp = 1;
+    nonceSub = 1;
     isConnected = false;
     callbackRegArray = [];
     callbackLoginArray = [];
@@ -49,6 +50,9 @@ class Program {
                     break;
                 case clientCommands.WHISPER:
                     this.WhisperToAnotherUser(params);
+                    break;
+                case clientCommands.SUBSCRIBE:
+                    this.SubscribeToGroupchat(params);
                     break;
                 default:
                     break;
@@ -223,6 +227,15 @@ class Program {
                 displayResult += `FAILED: ${failureMessage}`;
             }
             console.log(displayResult);
+        }
+    };
+
+    SubscribeToGroupchat = (params) => {
+        if (this.DEBUG) console.log(params);
+        if (params.length == 2) {
+            let groupchat = params[1];
+
+            this.socket.write(`${commands.SUBSCRIBE}/${this.nonceSub}/${groupchat}`);
         }
     };
 }

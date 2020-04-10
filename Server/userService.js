@@ -5,6 +5,7 @@ const responseStatus = require('../Common/responseStatus');
 class userService {
     accounts = [];
     loggedInAccounts = [];
+    groupchatMembers = [];
 
     RegisterAccount = (username, password) => {
         if (username && username.length >= 4 && password && password.length >= 4) {
@@ -91,6 +92,29 @@ class userService {
             return 'Invalid Sender';
         }
     };
+
+    SubscribeToGroupchat = (socket, groupchat) => {
+        for (let i = 0; i < this.loggedInAccounts.length; i++) {
+            if (this.loggedInAccounts[i].socket.remoteAddress == socket.remoteAddress &&
+                this.loggedInAccounts[i].socket.remotePort == socket.remotePort) {
+                for (let j = 0; j < this.groupchatMembers.length; j++) {
+                    if (this.groupchatMembers[j].groupchat == groupchat &&
+                        this.groupchatMembers[j].username == this.loggedInAccounts[i].username) {
+                        console.log(this.groupchatMembers);
+                        return true;
+                    }
+                }
+                this.groupchatMembers.push({
+                    groupchat: groupchat,
+                    username: this.loggedInAccounts[i].username
+                });
+                console.log(this.groupchatMembers);
+                return true;
+            }
+        }
+        return 'Not yet logged in';
+    };
+
 }
 
 module.exports = userService;
