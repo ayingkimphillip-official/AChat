@@ -105,6 +105,7 @@ class userService {
                     }
                 }
                 this.groupchatMembers.push({
+                    socket: socket,
                     groupchat: groupchat,
                     username: this.loggedInAccounts[i].username
                 });
@@ -131,6 +132,35 @@ class userService {
             }
         }
         return 'Not yet logged in';
+    };
+
+    ChatToGroup = (socket, request) => {
+        let sender;
+
+        for (let i = 0; i < this.loggedInAccounts.length; i++) {
+            if (this.loggedInAccounts[i].socket.remoteAddress == socket.remoteAddress &&
+                this.loggedInAccounts[i].socket.remotePort == socket.remotePort) {
+                sender = this.loggedInAccounts[i].username;
+                break;
+            }
+        }
+        if (sender) {
+            let hasSent = false;
+            for (let i = 0; i < this.groupchatMembers.length; i++) {
+                if (this.groupchatMembers[i].groupchat == request[2] &&
+                    this.groupchatMembers[i].username != sender) {
+                    this.groupchatMembers[i].socket.write(`${commands.GROUPCHAT}/${request[1]}/${responseStatus.MESSAGETOGROUP}/${request[2]}/${sender}/${request[3]}`);
+                    hasSent = true;
+                }
+            }
+            if (hasSent) return true;
+            else {
+                return 'No group online';
+            }
+        }
+        else {
+            return 'Not yet logged in';
+        }
     };
 
 }

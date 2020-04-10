@@ -4,7 +4,8 @@ const clientCommands = {
     LOGOUT: '-logout',
     WHISPER: '-whisper',
     SUBSCRIBE: '-subscribe',
-    UNSUBSCRIBE: '-unsubscribe'
+    UNSUBSCRIBE: '-unsubscribe',
+    GROUPCHAT: '-group'
 }
 
 module.exports = clientCommands;

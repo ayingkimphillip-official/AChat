@@ -4,7 +4,8 @@ const commands = {
     LOGOUT: 3,
     WHISPER: 4,
     SUBSCRIBE: 5,
-    UNSUBSCRIBE: 6
+    UNSUBSCRIBE: 6,
+    GROUPCHAT: 7
 }
 
 module.exports = commands;

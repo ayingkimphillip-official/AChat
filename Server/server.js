@@ -44,6 +44,9 @@ class Program {
             case commands.UNSUBSCRIBE:
                 this.UnsubscribeToGroupchat(socket, request);
                 break;
+            case commands.GROUPCHAT:
+                this.ChatToGroup(socket, request);
+                break;
             default:
                 break;
         }
@@ -103,6 +106,14 @@ class Program {
         }
     };
 
+    ChatToGroup = (socket, request) => {
+        if (request.length == 4) {
+            let result = this.userService.ChatToGroup(socket, request);
+            if (result == true)
+                socket.write(`${commands.GROUPCHAT}/${request[1]}/${responseStatus.SUCCESS}`);
+            else socket.write(`${commands.GROUPCHAT}/${request[1]}/${responseStatus.FAILED}/${result}`);
+        }
+    };
 }
 
 (new Program()).Main();

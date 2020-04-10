@@ -15,6 +15,7 @@ class Program {
     nonceWhisp = 1;
     nonceSub = 1;
     nonceUnsub = 1;
+    nonceGroup = 1;
     isConnected = false;
     callbackRegArray = [];
     callbackLoginArray = [];
@@ -22,6 +23,7 @@ class Program {
     callbackWhispArray = [];
     callbackSubArray = [];
     callbackUnsubArray = [];
+    callbackGroupchatArray = [];
     interface;
 
     Main = () => {
@@ -60,6 +62,9 @@ class Program {
                 case clientCommands.UNSUBSCRIBE:
                     this.UnsubscribeToGroupchat(params);
                     break;
+                case clientCommands.GROUPCHAT:
+                    this.ChatToGroup(params);
+                    break;
                 default:
                     break;
             }
@@ -68,7 +73,7 @@ class Program {
     };
 
     OnDataRecieved = (data) => {
-        console.log(`${data.toString()}`);
+        if (this.DEBUG) console.log(`${data.toString()}`);
         const response = data.toString().split('/');
         const command = parseInt(response[0]);
         const responseNonce = parseInt(response[1]);
@@ -110,7 +115,7 @@ class Program {
             }
 
             if (response.length == 5) {
-                console.log(`-whisp\t${response[3]}: ${response[4]}`);
+                console.log(`-whisp\n${response[3]}: ${response[4]}`);
             }
         }
         else if (command == commands.SUBSCRIBE && response.length >= 3) {
@@ -129,6 +134,19 @@ class Program {
                     this.callbackUnsubArray.splice(i, 1);
                     break;
                 }
+            }
+        }
+        else if (command == commands.GROUPCHAT && response.length >= 3) {
+            for (let i = 0; i < this.callbackGroupchatArray.length; i++) {
+                if (this.callbackGroupchatArray[i].nonce == responseNonce) {
+                    this.callbackGroupchatArray[i].callback(data);
+                    this.callbackGroupchatArray.splice(i, 1);
+                    break;
+                }
+            }
+
+            if (response.length == 6) {
+                console.log(`-groupchat\n${response[3]}>${response[4]}: ${response[5]}`);
             }
         }
     };
@@ -306,6 +324,37 @@ class Program {
             let displayResult = "Unsubscription ";
             if (result == responseStatus.SUCCESS) {
                 displayResult += "SUCCESSFUL";
+            }
+            else {
+                displayResult += `FAILED: ${failureMessage}`;
+            }
+            console.log(displayResult);
+        }
+    };
+
+    ChatToGroup = (params) => {
+        if (params.length == 3) {
+            const group = params[1];
+            const message = params[2];
+
+            this.socket.write(`${commands.GROUPCHAT}/${this.nonceGroup}/${group}/${message}`);
+            this.callbackGroupchatArray.push({
+                nonce: this.nonceGroup++,
+                callback: this.ChatToGroupCallback
+            });
+        }
+    };
+
+    ChatToGroupCallback = (data) => {
+        let result = data.toString().split('/');
+        const command = parseInt(result[0]);
+        const failureMessage = result[3];
+        result = parseInt(result[2]);
+
+        if (command == commands.GROUPCHAT) {
+            let displayResult = "MESSAGE TO GROUP ";
+            if (result == responseStatus.SUCCESS) {
+                displayResult += "SUCCESSFULLY DELIVERED";
             }
             else {
                 displayResult += `FAILED: ${failureMessage}`;
