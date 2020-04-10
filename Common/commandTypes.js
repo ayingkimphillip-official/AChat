@@ -3,7 +3,8 @@ const commands = {
     LOGIN: 2,
     LOGOUT: 3,
     WHISPER: 4,
-    SUBSCRIBE: 5
+    SUBSCRIBE: 5,
+    UNSUBSCRIBE: 6
 }
 
 module.exports = commands;

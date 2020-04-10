@@ -115,6 +115,24 @@ class userService {
         return 'Not yet logged in';
     };
 
+    UnsubscribeToGroupchat = (socket, groupchat) => {
+        for (let i = 0; i < this.loggedInAccounts.length; i++) {
+            if (this.loggedInAccounts[i].socket.remoteAddress == socket.remoteAddress &&
+                this.loggedInAccounts[i].socket.remotePort == socket.remotePort) {
+                for (let j = 0; j < this.groupchatMembers.length; j++) {
+                    if (this.groupchatMembers[j].groupchat == groupchat &&
+                        this.groupchatMembers[j].username == this.loggedInAccounts[i].username) {
+                        this.groupchatMembers.splice(j, 1);
+                        console.log(this.groupchatMembers);
+                        return true;
+                    }
+                }
+                return 'Groupchat does not exist';
+            }
+        }
+        return 'Not yet logged in';
+    };
+
 }
 
 module.exports = userService;

@@ -3,7 +3,8 @@ const clientCommands = {
     LOGIN: '-login',
     LOGOUT: '-logout',
     WHISPER: '-whisper',
-    SUBSCRIBE: '-subscribe'
+    SUBSCRIBE: '-subscribe',
+    UNSUBSCRIBE: '-unsubscribe'
 }
 
 module.exports = clientCommands;

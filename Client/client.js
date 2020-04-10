@@ -5,7 +5,7 @@ const responseStatus = require('../Common/responseStatus');
 const clientCommands = require('./clientCommands');
 
 class Program {
-    DEBUG = true;
+    DEBUG = false;
     port = 1337;
     address = "127.0.0.1";
     socket;
@@ -14,11 +14,14 @@ class Program {
     nonceLogout = 1;
     nonceWhisp = 1;
     nonceSub = 1;
+    nonceUnsub = 1;
     isConnected = false;
     callbackRegArray = [];
     callbackLoginArray = [];
     callbackLogoutArray = [];
     callbackWhispArray = [];
+    callbackSubArray = [];
+    callbackUnsubArray = [];
     interface;
 
     Main = () => {
@@ -54,6 +57,9 @@ class Program {
                 case clientCommands.SUBSCRIBE:
                     this.SubscribeToGroupchat(params);
                     break;
+                case clientCommands.UNSUBSCRIBE:
+                    this.UnsubscribeToGroupchat(params);
+                    break;
                 default:
                     break;
             }
@@ -62,7 +68,7 @@ class Program {
     };
 
     OnDataRecieved = (data) => {
-        if (this.DEBUG) console.log(`${data.toString()}`);
+        console.log(`${data.toString()}`);
         const response = data.toString().split('/');
         const command = parseInt(response[0]);
         const responseNonce = parseInt(response[1]);
@@ -105,6 +111,24 @@ class Program {
 
             if (response.length == 5) {
                 console.log(`-whisp\t${response[3]}: ${response[4]}`);
+            }
+        }
+        else if (command == commands.SUBSCRIBE && response.length >= 3) {
+            for (let i = 0; i < this.callbackSubArray.length; i++) {
+                if (this.callbackSubArray[i].nonce == responseNonce) {
+                    this.callbackSubArray[i].callback(data);
+                    this.callbackSubArray.splice(i, 1);
+                    break;
+                }
+            }
+        }
+        else if (command == commands.UNSUBSCRIBE && response.length >= 3) {
+            for (let i = 0; i < this.callbackUnsubArray.length; i++) {
+                if (this.callbackUnsubArray[i].nonce == responseNonce) {
+                    this.callbackUnsubArray[i].callback(data);
+                    this.callbackUnsubArray.splice(i, 1);
+                    break;
+                }
             }
         }
     };
@@ -231,11 +255,62 @@ class Program {
     };
 
     SubscribeToGroupchat = (params) => {
-        if (this.DEBUG) console.log(params);
         if (params.length == 2) {
-            let groupchat = params[1];
+            const groupchat = params[1];
 
             this.socket.write(`${commands.SUBSCRIBE}/${this.nonceSub}/${groupchat}`);
+            this.callbackSubArray.push({
+                nonce: this.nonceSub++,
+                callback: this.SubscribeCallback
+            });
+        }
+    };
+
+    SubscribeCallback = (data) => {
+        let result = data.toString().split('/');
+        const command = parseInt(result[0]);
+        const failureMessage = result[3];
+        result = parseInt(result[2]);
+
+        if (command == commands.SUBSCRIBE) {
+            let displayResult = "SUBSCRIPTION ";
+            if (result == responseStatus.SUCCESS) {
+                displayResult += "SUCCESSFUL";
+            }
+            else {
+                displayResult += `FAILED: ${failureMessage}`;
+            }
+            console.log(displayResult);
+        }
+    };
+
+    UnsubscribeToGroupchat = (params) => {
+        if (params.length == 2) {
+            const groupchat = params[1];
+
+            this.socket.write(`${commands.UNSUBSCRIBE}/${this.nonceUnsub}/${groupchat}`);
+            this.callbackUnsubArray.push({
+                nonce: this.nonceUnsub++,
+                callback: this.UnsubscribeCallback
+            });
+        }
+    };
+
+    UnsubscribeCallback = (data) => {
+        let result = data.toString().split('/');
+        const command = parseInt(result[0]);
+        const failureMessage = result[3];
+        result = parseInt(result[2]);
+
+        if (command == commands.UNSUBSCRIBE) {
+            let displayResult = "Unsubscription ";
+            if (result == responseStatus.SUCCESS) {
+                displayResult += "SUCCESSFUL";
+            }
+            else {
+                displayResult += `FAILED: ${failureMessage}`;
+            }
+            console.log(displayResult);
         }
     };
 }
