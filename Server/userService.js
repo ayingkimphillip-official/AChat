@@ -1,5 +1,6 @@
 const commands = require('../Common/commandTypes');
 const responseStatus = require('../Common/responseStatus');
+const helpers = require('../Common/helpers');
 
 
 class userService {
@@ -11,12 +12,10 @@ class userService {
         if (username && username.length >= 4 && password && password.length >= 4) {
             for (let i = 0; i < this.accounts.length; i++) {
                 if (this.accounts[i].username == username) {
-                    console.log(this.accounts);
                     return 'Username already exists!';
                 }
             }
             this.accounts.push({ username, password });
-            console.log(this.accounts);
             return true;
         }
         else {
@@ -34,7 +33,6 @@ class userService {
                     for (let j = 0; j < this.loggedInAccounts.length; j++) {
                         if (this.loggedInAccounts[j].socket.remotePort == remotePort &&
                             this.loggedInAccounts[j].socket.remoteAddress == remoteAddress) {
-                            console.log(this.loggedInAccounts);
                             return 'Account already logged in!';
                         }
                     }
@@ -42,7 +40,6 @@ class userService {
                         socket,
                         username
                     });
-                    console.log(this.loggedInAccounts);
                     return true;
                 }
             }
@@ -64,33 +61,20 @@ class userService {
         return 'Not logged in';
     };
 
-    WhisperToAnotherUser = (socket, request) => {
-        let senderRemoteAddress = socket.remoteAddress;
-        let senderRemotePort = socket.remotePort;
-        let sender;
+    WhisperToAnotherUser = (socket, nonce, payload) => {
+        let sender = this.GetSocketUser(socket);
 
+        if (!sender) return 'Invalid Sender';
+
+        let hasSent = false;
         for (let i = 0; i < this.loggedInAccounts.length; i++) {
-            if (this.loggedInAccounts[i].socket.remoteAddress == senderRemoteAddress &&
-                this.loggedInAccounts[i].socket.remotePort == senderRemotePort) {
-                sender = this.loggedInAccounts[i].username;
-                break;
+            if (this.loggedInAccounts[i].username == payload[0]) {
+                this.loggedInAccounts[i].socket.write(helpers.EncodeMessage(commands.WHISPER, nonce, `${sender}/${payload[1]}`, responseStatus.MESSAGETOUSER));
+                hasSent = true;
             }
         }
-
-        if (sender) {
-            let hasSent = false;
-            for (let i = 0; i < this.loggedInAccounts.length; i++) {
-                if (this.loggedInAccounts[i].username == request[2]) {
-                    this.loggedInAccounts[i].socket.write(`${commands.WHISPER}/${request[1]}/${responseStatus.MESSAGETOUSER}/${sender}/${request[3]}`);
-                    hasSent = true;
-                }
-            }
-            if (hasSent) return true;
-            return 'Invalid Reciever';
-        }
-        else {
-            return 'Invalid Sender';
-        }
+        if (hasSent) return true;
+        return 'Invalid Reciever';
     };
 
     SubscribeToGroupchat = (socket, groupchat) => {
@@ -100,8 +84,7 @@ class userService {
                 for (let j = 0; j < this.groupchatMembers.length; j++) {
                     if (this.groupchatMembers[j].groupchat == groupchat &&
                         this.groupchatMembers[j].username == this.loggedInAccounts[i].username) {
-                        console.log(this.groupchatMembers);
-                        return true;
+                        return 'User already a subscriber to group.';
                     }
                 }
                 this.groupchatMembers.push({
@@ -109,7 +92,6 @@ class userService {
                     groupchat: groupchat,
                     username: this.loggedInAccounts[i].username
                 });
-                console.log(this.groupchatMembers);
                 return true;
             }
         }
@@ -124,7 +106,6 @@ class userService {
                     if (this.groupchatMembers[j].groupchat == groupchat &&
                         this.groupchatMembers[j].username == this.loggedInAccounts[i].username) {
                         this.groupchatMembers.splice(j, 1);
-                        console.log(this.groupchatMembers);
                         return true;
                     }
                 }
@@ -134,7 +115,30 @@ class userService {
         return 'Not yet logged in';
     };
 
-    ChatToGroup = (socket, request) => {
+    ChatToGroup = (socket, nonce, request) => {
+        let sender = this.GetSocketUser(socket);
+        if (!sender) return 'Not yet logged in';
+
+        let isMember = this.GroupHasMember(sender, request[0]);
+        if (!isMember) return 'User is not a member.';
+
+        let hasSent = false;
+        for (let i = 0; i < this.groupchatMembers.length; i++) {
+            if (this.groupchatMembers[i].groupchat == request[0] &&
+                this.groupchatMembers[i].username != sender) {
+                this.groupchatMembers[i].socket.write(helpers.EncodeMessage(commands.GROUPCHAT, nonce, `${sender}/${request[0]}/${request[1]}`, responseStatus.MESSAGETOGROUP));
+                hasSent = true;
+            }
+            else {
+                hasSent = true;
+            }
+        }
+
+        if (!hasSent) return 'Group does not exist';
+        return true;
+    };
+
+    GetSocketUser = (socket) => {
         let sender;
 
         for (let i = 0; i < this.loggedInAccounts.length; i++) {
@@ -144,23 +148,17 @@ class userService {
                 break;
             }
         }
-        if (sender) {
-            let hasSent = false;
-            for (let i = 0; i < this.groupchatMembers.length; i++) {
-                if (this.groupchatMembers[i].groupchat == request[2] &&
-                    this.groupchatMembers[i].username != sender) {
-                    this.groupchatMembers[i].socket.write(`${commands.GROUPCHAT}/${request[1]}/${responseStatus.MESSAGETOGROUP}/${request[2]}/${sender}/${request[3]}`);
-                    hasSent = true;
-                }
-            }
-            if (hasSent) return true;
-            else {
-                return 'No group online';
+        return sender;
+    };
+
+    GroupHasMember = (sender, groupchat) => {
+        for (let i = 0; i < this.groupchatMembers.length; i++) {
+            if (this.groupchatMembers[i].username == sender &&
+                this.groupchatMembers[i].groupchat == groupchat) {
+                return true;
             }
         }
-        else {
-            return 'Not yet logged in';
-        }
+        return false;
     };
 
 }

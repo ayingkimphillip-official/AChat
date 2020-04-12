@@ -2,6 +2,7 @@ const net = require('net');
 const commands = require('../Common/commandTypes');
 const responseStatus = require('../Common/responseStatus');
 const UserService = require('../Server/userService');
+const helpers = require('../Common/helpers');
 
 class Program {
     port = 1337;
@@ -17,101 +18,98 @@ class Program {
     OnClientConnection = (socket) => {
         console.log(`Client connected: ${socket.remoteAddress}:${socket.remotePort}`);
         socket.on('data', (data) => this.OnDataReceived(socket, data));
+        socket.on('close', () => this.userService.LogoutAccount(socket));
     };
 
     OnDataReceived = (socket, data) => {
-        console.log(`Request from Client: ${socket.remoteAddress}:${socket.remotePort} : ${data.toString()}\r\n`);
-        data = data.toString();
-        const request = data.split('/');
-        const command = parseInt(request[0]);
+        console.log(`Request from Client: ${socket.remoteAddress}:${socket.remotePort}: `, data);
+        let { command, nonce, payload } = helpers.DecodeMessage(data);
 
         switch (command) {
             case commands.REGISTER:
-                this.RegisterAccount(socket, request);
+                this.RegisterAccount(socket, nonce, payload);
                 break;
             case commands.LOGIN:
-                this.LoginAccount(socket, request);
+                this.LoginAccount(socket, nonce, payload);
                 break;
             case commands.LOGOUT:
-                this.LogoutAccount(socket, request);
+                this.LogoutAccount(socket, nonce);
                 break;
             case commands.WHISPER:
-                this.WhisperToAnotherUser(socket, request);
+                this.WhisperToAnotherUser(socket, nonce, payload);
                 break;
             case commands.SUBSCRIBE:
-                this.SubscribeToGroupchat(socket, request);
+                this.SubscribeToGroupchat(socket, nonce, payload);
                 break;
             case commands.UNSUBSCRIBE:
-                this.UnsubscribeToGroupchat(socket, request);
+                this.UnsubscribeToGroupchat(socket, nonce, payload);
                 break;
             case commands.GROUPCHAT:
-                this.ChatToGroup(socket, request);
+                this.ChatToGroup(socket, nonce, payload);
                 break;
             default:
                 break;
         }
     };
 
-    RegisterAccount = (socket, request) => {
-        if (request.length == 4) {
-            let result = this.userService.RegisterAccount(request[2], request[3]);
-            if (result == true)
-                socket.write(`${commands.REGISTER}/${request[1]}/${responseStatus.SUCCESS}`);
-            else socket.write(`${commands.REGISTER}/${request[1]}/${responseStatus.FAILED}/${result}`);
-        }
-    };
-
-    LoginAccount = (socket, request) => {
-        if (request.length == 4) {
-            let result = this.userService.LoginAccount(socket, request[2], request[3]);
-            if (result == true)
-                socket.write(`${commands.LOGIN}/${request[1]}/${responseStatus.SUCCESS}`);
-            else socket.write(`${commands.LOGIN}/${request[1]}/${responseStatus.FAILED}/${result}`);
-        }
-    };
-
-    LogoutAccount = (socket, request) => {
+    RegisterAccount = (socket, nonce, payload) => {
+        let request = payload.split('/');
         if (request.length == 2) {
-            let result = this.userService.LogoutAccount(socket);
+            let result = this.userService.RegisterAccount(request[0], request[1]);
             if (result == true)
-                socket.write(`${commands.LOGOUT}/${request[1]}/${responseStatus.SUCCESS}`);
-            else socket.write(`${commands.LOGOUT}/${request[1]}/${responseStatus.FAILED}/${result}`);
+                socket.write(helpers.EncodeMessage(commands.REGISTER, nonce, '', responseStatus.SUCCESS));
+            else socket.write(helpers.EncodeMessage(commands.REGISTER, nonce, result, responseStatus.FAILED));
         }
     };
 
-    WhisperToAnotherUser = (socket, request) => {
-        if (request.length == 4) {
-            let result = this.userService.WhisperToAnotherUser(socket, request);
+    LoginAccount = (socket, nonce, payload) => {
+        let request = payload.split('/');
+        if (request.length == 2) {
+            let result = this.userService.LoginAccount(socket, request[0], request[1]);
             if (result == true)
-                socket.write(`${commands.WHISPER}/${request[1]}/${responseStatus.SUCCESS}`);
-            else socket.write(`${commands.WHISPER}/${request[1]}/${responseStatus.FAILED}/${result}`);
+                socket.write(helpers.EncodeMessage(commands.LOGIN, nonce, '', responseStatus.SUCCESS));
+            else socket.write(helpers.EncodeMessage(commands.LOGIN, nonce, result, responseStatus.FAILED));
         }
     };
 
-    SubscribeToGroupchat = (socket, request) => {
-        if (request.length == 3) {
-            let result = this.userService.SubscribeToGroupchat(socket, request[2]);
+    LogoutAccount = (socket, nonce) => {
+        let result = this.userService.LogoutAccount(socket);
+        if (result == true)
+            socket.write(helpers.EncodeMessage(commands.LOGOUT, nonce, '', responseStatus.SUCCESS));
+        else socket.write(helpers.EncodeMessage(commands.LOGOUT, nonce, result, responseStatus.FAILED));
+    };
+
+    WhisperToAnotherUser = (socket, nonce, payload) => {
+        let request = payload.split('/');
+        if (request.length == 2) {
+            let result = this.userService.WhisperToAnotherUser(socket, nonce, request);
             if (result == true)
-                socket.write(`${commands.SUBSCRIBE}/${request[1]}/${responseStatus.SUCCESS}`);
-            else socket.write(`${commands.SUBSCRIBE}/${request[1]}/${responseStatus.FAILED}/${result}`);
+                socket.write(helpers.EncodeMessage(commands.WHISPER, nonce, '', responseStatus.SUCCESS));
+            else socket.write(helpers.EncodeMessage(commands.WHISPER, nonce, result, responseStatus.FAILED));
         }
     };
 
-    UnsubscribeToGroupchat = (socket, request) => {
-        if (request.length == 3) {
-            let result = this.userService.UnsubscribeToGroupchat(socket, request[2]);
-            if (result == true)
-                socket.write(`${commands.UNSUBSCRIBE}/${request[1]}/${responseStatus.SUCCESS}`);
-            else socket.write(`${commands.UNSUBSCRIBE}/${request[1]}/${responseStatus.FAILED}/${result}`);
-        }
+    SubscribeToGroupchat = (socket, nonce, payload) => {
+        let result = this.userService.SubscribeToGroupchat(socket, payload);
+        if (result == true)
+            socket.write(helpers.EncodeMessage(commands.SUBSCRIBE, nonce, '', responseStatus.SUCCESS));
+        else socket.write(helpers.EncodeMessage(commands.SUBSCRIBE, nonce, result, responseStatus.FAILED));
     };
 
-    ChatToGroup = (socket, request) => {
-        if (request.length == 4) {
-            let result = this.userService.ChatToGroup(socket, request);
+    UnsubscribeToGroupchat = (socket, nonce, payload) => {
+        let result = this.userService.UnsubscribeToGroupchat(socket, payload);
+        if (result == true)
+            socket.write(helpers.EncodeMessage(commands.UNSUBSCRIBE, nonce, '', responseStatus.SUCCESS));
+        else socket.write(helpers.EncodeMessage(commands.UNSUBSCRIBE, nonce, result, responseStatus.FAILED));
+    };
+
+    ChatToGroup = (socket, nonce, payload) => {
+        let request = payload.split('/');
+        if (request.length == 2) {
+            let result = this.userService.ChatToGroup(socket, nonce, request);
             if (result == true)
-                socket.write(`${commands.GROUPCHAT}/${request[1]}/${responseStatus.SUCCESS}`);
-            else socket.write(`${commands.GROUPCHAT}/${request[1]}/${responseStatus.FAILED}/${result}`);
+                socket.write(helpers.EncodeMessage(commands.GROUPCHAT, nonce, '', responseStatus.SUCCESS));
+            else socket.write(helpers.EncodeMessage(commands.GROUPCHAT, nonce, result, responseStatus.FAILED));
         }
     };
 }

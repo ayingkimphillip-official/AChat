@@ -3,6 +3,7 @@ const readline = require('readline');
 const commands = require('../Common/commandTypes');
 const responseStatus = require('../Common/responseStatus');
 const clientCommands = require('./clientCommands');
+const helpers = require('../Common/helpers');
 
 class Program {
     DEBUG = false;
@@ -35,6 +36,7 @@ class Program {
     OnServerConnection = () => {
         console.log("Connected to Server.");
         this.isConnected = true;
+
         this.interface = readline.createInterface({
             input: process.stdin,
             output: process.stdout
@@ -68,85 +70,90 @@ class Program {
                 default:
                     break;
             }
-
         });
     };
 
     OnDataRecieved = (data) => {
+        let { command, nonce: responseNonce, statusCode, payload } = helpers.DecodeMessage(data, true);
         if (this.DEBUG) console.log(`${data.toString()}`);
-        const response = data.toString().split('/');
-        const command = parseInt(response[0]);
-        const responseNonce = parseInt(response[1]);
 
-        if (command == commands.REGISTER && response.length >= 3) {
+        if (command == commands.REGISTER) {
             for (let i = 0; i < this.callbackRegArray.length; i++) {
                 if (this.callbackRegArray[i].nonce == responseNonce) {
-                    this.callbackRegArray[i].callback(data);
+                    this.callbackRegArray[i].callback(statusCode, payload);
                     this.callbackRegArray.splice(i, 1);
                     break;
                 }
             }
         }
-        else if (command == commands.LOGIN && response.length >= 3) {
+        else if (command == commands.LOGIN) {
             for (let i = 0; i < this.callbackLoginArray.length; i++) {
                 if (this.callbackLoginArray[i].nonce == responseNonce) {
-                    this.callbackLoginArray[i].callback(data);
+                    this.callbackLoginArray[i].callback(statusCode, payload);
                     this.callbackLoginArray.splice(i, 1);
                     break;
                 }
             }
         }
-        else if (command == commands.LOGOUT && response.length >= 3) {
+        else if (command == commands.LOGOUT) {
             for (let i = 0; i < this.callbackLogoutArray.length; i++) {
                 if (this.callbackLogoutArray[i].nonce == responseNonce) {
-                    this.callbackLogoutArray[i].callback(data);
+                    this.callbackLogoutArray[i].callback(statusCode, payload);
                     this.callbackLogoutArray.splice(i, 1);
                     break;
                 }
             }
         }
-        else if (command == commands.WHISPER && response.length >= 3) {
+        else if (command == commands.WHISPER) {
             for (let i = 0; i < this.callbackWhispArray.length; i++) {
                 if (this.callbackWhispArray[i].nonce == responseNonce) {
-                    this.callbackWhispArray[i].callback(data);
+                    this.callbackWhispArray[i].callback(statusCode, payload);
                     this.callbackWhispArray.splice(i, 1);
                     break;
                 }
             }
 
-            if (response.length == 5) {
-                console.log(`-whisp\n${response[3]}: ${response[4]}`);
+            if (statusCode == responseStatus.MESSAGETOUSER) {
+                payload = payload.split('/');
+                const sender = payload[0];
+                const message = payload[1];
+
+                console.log(`(whisp)${sender}: ${message}`);
             }
         }
-        else if (command == commands.SUBSCRIBE && response.length >= 3) {
+        else if (command == commands.SUBSCRIBE) {
             for (let i = 0; i < this.callbackSubArray.length; i++) {
                 if (this.callbackSubArray[i].nonce == responseNonce) {
-                    this.callbackSubArray[i].callback(data);
+                    this.callbackSubArray[i].callback(statusCode, payload);
                     this.callbackSubArray.splice(i, 1);
                     break;
                 }
             }
         }
-        else if (command == commands.UNSUBSCRIBE && response.length >= 3) {
+        else if (command == commands.UNSUBSCRIBE) {
             for (let i = 0; i < this.callbackUnsubArray.length; i++) {
                 if (this.callbackUnsubArray[i].nonce == responseNonce) {
-                    this.callbackUnsubArray[i].callback(data);
+                    this.callbackUnsubArray[i].callback(statusCode, payload);
                     this.callbackUnsubArray.splice(i, 1);
                     break;
                 }
             }
         }
-        else if (command == commands.GROUPCHAT && response.length >= 3) {
+        else if (command == commands.GROUPCHAT) {
             for (let i = 0; i < this.callbackGroupchatArray.length; i++) {
                 if (this.callbackGroupchatArray[i].nonce == responseNonce) {
-                    this.callbackGroupchatArray[i].callback(data);
+                    this.callbackGroupchatArray[i].callback(statusCode, payload);
                     this.callbackGroupchatArray.splice(i, 1);
                     break;
                 }
             }
+            if (statusCode == responseStatus.MESSAGETOGROUP) {
+                payload = payload.split('/');
+                const sender = payload[0];
+                const group = payload[1];
+                const message = payload[2];
 
-            if (response.length == 6) {
-                console.log(`-groupchat\n${response[3]}>${response[4]}: ${response[5]}`);
+                console.log(`[${group}]${sender}: ${message}`);
             }
         }
     };
@@ -156,30 +163,24 @@ class Program {
             let username = params[1];
             let password = params[2];
 
-            this.socket.write(`${commands.REGISTER} /${this.nonceReg}/${username}/${password}`);
+            this.socket.write(helpers.EncodeMessage(commands.REGISTER, this.nonceReg, `${username}/${password}`));
             this.callbackRegArray.push({
                 nonce: this.nonceReg++,
                 callback: this.RegisterCallback
             });
+            if (this.nonceReg > 255) this.nonceReg = 1;
         }
     };
 
-    RegisterCallback = (data) => {
-        let result = data.toString().split('/');
-        const command = parseInt(result[0]);
-        const failureMessage = result[3];
-        result = parseInt(result[2]);
-
-        if (command == commands.REGISTER) {
-            let displayResult = "Registration ";
-            if (result == responseStatus.SUCCESS) {
-                displayResult += "SUCCESSFUL!";
-            }
-            else {
-                displayResult += `FAILED: ${failureMessage}`;
-            }
-            console.log(displayResult);
+    RegisterCallback = (statusCode, payload) => {
+        let displayResult = "Registration ";
+        if (statusCode == responseStatus.SUCCESS) {
+            displayResult += "SUCCESSFUL!";
         }
+        else {
+            displayResult += `FAILED: ${payload}`;
+        }
+        console.log(displayResult);
     };
 
     LoginUser = (params) => {
@@ -187,7 +188,7 @@ class Program {
             let username = params[1];
             let password = params[2];
 
-            this.socket.write(`${commands.LOGIN}/${this.nonceLogin}/${username}/${password}`);
+            this.socket.write(helpers.EncodeMessage(commands.LOGIN, this.nonceLogin, `${username}/${password}`));
             this.callbackLoginArray.push({
                 nonce: this.nonceLogin++,
                 callback: this.LoginCallback
@@ -195,27 +196,21 @@ class Program {
         }
     };
 
-    LoginCallback = (data) => {
-        let result = data.toString().split('/');
-        const command = parseInt(result[0]);
-        const failureMessage = result[3];
-        result = parseInt(result[2]);
-
-        if (command == commands.LOGIN) {
-            let displayResult = "Login ";
-            if (result == responseStatus.SUCCESS) {
-                displayResult += "SUCCESSFUL!";
-            }
-            else {
-                displayResult += `FAILED: ${failureMessage}`;
-            }
-            console.log(displayResult);
+    LoginCallback = (statusCode, payload) => {
+        let displayResult = "Login ";
+        if (statusCode == responseStatus.SUCCESS) {
+            displayResult += "SUCCESSFUL!";
         }
+        else {
+            displayResult += `FAILED: ${payload}`;
+        }
+        console.log(displayResult);
     };
 
     LogoutUser = (params) => {
         if (params.length == 1) {
-            this.socket.write(`${commands.LOGOUT}/${this.nonceLogout}`);
+
+            this.socket.write(helpers.EncodeMessage(commands.LOGOUT, this.nonceLogout, ''));
             this.callbackLogoutArray.push({
                 nonce: this.nonceLogout++,
                 callback: this.LogoutCallback
@@ -223,22 +218,15 @@ class Program {
         }
     };
 
-    LogoutCallback = (data) => {
-        let result = data.toString().split('/');
-        const command = parseInt(result[0]);
-        const failureMessage = result[3];
-        result = parseInt(result[2]);
-
-        if (command == commands.LOGOUT) {
-            let displayResult = "Logout ";
-            if (result == responseStatus.SUCCESS) {
-                displayResult += "SUCCESFFUL";
-            }
-            else {
-                displayResult += `FAILED: ${failureMessage}`;
-            }
-            console.log(displayResult);
+    LogoutCallback = (statusCode, payload) => {
+        let displayResult = "Logout ";
+        if (statusCode == responseStatus.SUCCESS) {
+            displayResult += "SUCCESFFUL";
         }
+        else {
+            displayResult += `FAILED: ${payload}`;
+        }
+        console.log(displayResult);
     };
 
     WhisperToAnotherUser = (params) => {
@@ -246,7 +234,7 @@ class Program {
             let reciever = params[1];
             let message = params[2];
 
-            this.socket.write(`${commands.WHISPER}/${this.nonceWhisp}/${reciever}/${message}`);
+            this.socket.write(helpers.EncodeMessage(commands.WHISPER, this.nonceWhisp, `${reciever}/${message}`));
             this.callbackWhispArray.push({
                 nonce: this.nonceWhisp++,
                 callback: this.WhisperCallback
@@ -254,29 +242,22 @@ class Program {
         }
     };
 
-    WhisperCallback = (data) => {
-        let result = data.toString().split('/');
-        const command = parseInt(result[0]);
-        const failureMessage = result[3];
-        result = parseInt(result[2]);
-
-        if (command == commands.WHISPER) {
-            let displayResult = "Message Sent ";
-            if (result == responseStatus.SUCCESS) {
-                displayResult += "SUCCESSFULLY";
-            }
-            else {
-                displayResult += `FAILED: ${failureMessage}`;
-            }
-            console.log(displayResult);
+    WhisperCallback = (statusCode, payload) => {
+        let displayResult = "Message Sent ";
+        if (statusCode == responseStatus.SUCCESS) {
+            displayResult += "SUCCESSFULLY";
         }
+        else {
+            displayResult += `FAILED: ${payload}`;
+        }
+        console.log(displayResult);
     };
 
     SubscribeToGroupchat = (params) => {
         if (params.length == 2) {
             const groupchat = params[1];
 
-            this.socket.write(`${commands.SUBSCRIBE}/${this.nonceSub}/${groupchat}`);
+            this.socket.write(helpers.EncodeMessage(commands.SUBSCRIBE, this.nonceSub, `${groupchat}`));
             this.callbackSubArray.push({
                 nonce: this.nonceSub++,
                 callback: this.SubscribeCallback
@@ -284,29 +265,22 @@ class Program {
         }
     };
 
-    SubscribeCallback = (data) => {
-        let result = data.toString().split('/');
-        const command = parseInt(result[0]);
-        const failureMessage = result[3];
-        result = parseInt(result[2]);
-
-        if (command == commands.SUBSCRIBE) {
-            let displayResult = "SUBSCRIPTION ";
-            if (result == responseStatus.SUCCESS) {
-                displayResult += "SUCCESSFUL";
-            }
-            else {
-                displayResult += `FAILED: ${failureMessage}`;
-            }
-            console.log(displayResult);
+    SubscribeCallback = (statusCode, payload) => {
+        let displayResult = "SUBSCRIPTION ";
+        if (statusCode == responseStatus.SUCCESS) {
+            displayResult += "SUCCESSFUL";
         }
+        else {
+            displayResult += `FAILED: ${payload}`;
+        }
+        console.log(displayResult);
     };
 
     UnsubscribeToGroupchat = (params) => {
         if (params.length == 2) {
             const groupchat = params[1];
 
-            this.socket.write(`${commands.UNSUBSCRIBE}/${this.nonceUnsub}/${groupchat}`);
+            this.socket.write(helpers.EncodeMessage(commands.UNSUBSCRIBE, this.nonceUnsub, `${groupchat}`));
             this.callbackUnsubArray.push({
                 nonce: this.nonceUnsub++,
                 callback: this.UnsubscribeCallback
@@ -314,22 +288,15 @@ class Program {
         }
     };
 
-    UnsubscribeCallback = (data) => {
-        let result = data.toString().split('/');
-        const command = parseInt(result[0]);
-        const failureMessage = result[3];
-        result = parseInt(result[2]);
-
-        if (command == commands.UNSUBSCRIBE) {
-            let displayResult = "Unsubscription ";
-            if (result == responseStatus.SUCCESS) {
-                displayResult += "SUCCESSFUL";
-            }
-            else {
-                displayResult += `FAILED: ${failureMessage}`;
-            }
-            console.log(displayResult);
+    UnsubscribeCallback = (statusCode, payload) => {
+        let displayResult = "Unsubscription ";
+        if (statusCode == responseStatus.SUCCESS) {
+            displayResult += "SUCCESSFUL";
         }
+        else {
+            displayResult += `FAILED: ${payload}`;
+        }
+        console.log(displayResult);
     };
 
     ChatToGroup = (params) => {
@@ -337,7 +304,7 @@ class Program {
             const group = params[1];
             const message = params[2];
 
-            this.socket.write(`${commands.GROUPCHAT}/${this.nonceGroup}/${group}/${message}`);
+            this.socket.write(helpers.EncodeMessage(commands.GROUPCHAT, this.nonceGroup, `${group}/${message}`));
             this.callbackGroupchatArray.push({
                 nonce: this.nonceGroup++,
                 callback: this.ChatToGroupCallback
@@ -345,22 +312,15 @@ class Program {
         }
     };
 
-    ChatToGroupCallback = (data) => {
-        let result = data.toString().split('/');
-        const command = parseInt(result[0]);
-        const failureMessage = result[3];
-        result = parseInt(result[2]);
-
-        if (command == commands.GROUPCHAT) {
-            let displayResult = "MESSAGE TO GROUP ";
-            if (result == responseStatus.SUCCESS) {
-                displayResult += "SUCCESSFULLY DELIVERED";
-            }
-            else {
-                displayResult += `FAILED: ${failureMessage}`;
-            }
-            console.log(displayResult);
+    ChatToGroupCallback = (statusCode, payload) => {
+        let displayResult = "MESSAGE TO GROUP ";
+        if (statusCode == responseStatus.SUCCESS) {
+            displayResult += "SUCCESSFULLY DELIVERED";
         }
+        else {
+            displayResult += `FAILED: ${payload}`;
+        }
+        console.log(displayResult);
     };
 }
 
