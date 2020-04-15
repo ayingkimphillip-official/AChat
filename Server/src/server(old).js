@@ -1,8 +1,8 @@
 const net = require('net');
-const commands = require('../Common/commandTypes');
-const responseStatus = require('../Common/responseStatus');
+const commands = require('../../Common/commandTypes');
+const responseStatus = require('../../Common/responseStatus');
 const UserService = require('../Server/userService');
-const helpers = require('../Common/helpers');
+const helpers = require('../../Common/helpers');
 
 class Program {
     port = 1337;

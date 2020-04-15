@@ -1,9 +1,9 @@
 const net = require('net');
 const readline = require('readline');
-const commands = require('../Common/commandTypes');
-const responseStatus = require('../Common/responseStatus');
-const clientCommands = require('./clientCommands');
-const helpers = require('../Common/helpers');
+const commands = require('../../Common/commandTypes');
+const responseStatus = require('../../Common/responseStatus');
+const clientCommands = require('./clientCommands(old)');
+const helpers = require('../../Common/helpers');
 
 class Program {
     DEBUG = false;
