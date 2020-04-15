@@ -1,46 +1,77 @@
 import * as net from 'net';
 import readline from 'readline';
+import Commands from '../../Common/Enums/Commands';
+import Response from '../../Common/Enums/Response';
+import ClientCommands from './clientCommands';
+import Helpers from '../../Common/helperFunctions';
 
 class Program {
     static Port: number = 1337;
     static Address: string = "127.0.0.1";
     static Socket: net.Socket;
     static Interface: readline.Interface;
-    // static OnServerConnection: (() => void) | undefined;
+    static Helpers: Helpers;
+    static Nonce: number = 1;
+    static CallBackArray: Buffer[] = [];
 
     static Main(args: string[]) {
         console.log("HELLO CLIENT WORLD");
-        this.Socket = new net.Socket();
-        this.Socket.connect(this.Port, this.Address, this.OnServerConnection);
-        this.Socket.on('data', this.OnDataRecieved);
+        Program.Socket = new net.Socket();
+        Program.Helpers = new Helpers();
+        Program.Socket = Program.Socket.connect(Program.Port, Program.Address, Program.OnServerConnection);
+        Program.Socket.on('data', Program.OnDataRecieved);
     }
 
-    static OnServerConnection() {
+    static OnServerConnection = () => {
         console.log("Connected to Server");
-        console.log(this.Socket);
-        this.Interface = readline.createInterface({
+        Program.Interface = readline.createInterface({
             input: process.stdin,
             output: process.stdout
         });
-        this.Interface.on('line', function (line: string) {
-            console.log(line);
-        })
+
+        Program.Interface.on('line', (line: string) => {
+            let params = line.split(' ');
+
+            switch (params[0]) {
+                case ClientCommands.REGISTER:
+                    Program.Register(params);
+                    break;
+                case ClientCommands.LOGIN:
+                    Program.Login(params);
+                    break;
+                default:
+                    break;
+            }
+        });
     }
 
-    // static OnServerConnection = (): void => {
-    //     console.log("Connected to Server");
-    //     let Interface = readline.createInterface({
-    //         input: process.stdin,
-    //         output: process.stdout
-    //     });
-    //     Interface.on('line', (line: string) => {
-    //         console.log(line);
-    //     });
-    // };
+    static OnDataRecieved = (data: Buffer) => {
+        let response = data.toString();
+        console.log(response);
+    }
 
-    static OnDataRecieved = (data: Buffer | string) => {
+    static Register = (params: string[]) => {
+        if (params.length == 3) {
+            let username = params[1];
+            let password = params[2];
+            let request: string;
 
-    };
+            request = Commands.REGISTER.toString().concat("", Program.Nonce.toString());
+            request = request.concat("", `${username}/${password}`);
+            Program.Helpers.EncodeMessage(request);
+
+            // Program.Socket.write(`1/${username}/${password}`);
+        }
+    }
+
+    static Login = (params: string[]) => {
+        if (params.length == 3) {
+            let username = params[1];
+            let password = params[2];
+
+            Program.Socket.write(`2/${username}/${password}`);
+        }
+    }
 }
 
 Program.Main([]);
