@@ -1,19 +1,24 @@
-import * as net from 'net';
+import IMessage from './Interfaces/IMessage';
 
 class Helpers {
-    public EncodeMessage = (message: string, status?: boolean): Buffer => {
-        let EncodedMessage = Buffer.from(message);
-        console.log(EncodedMessage);
-
-        return Buffer.concat([]);
+    public static EncodeMessage = (command: number, nonce: number, status: number, payload: string): Buffer => {
+        let EncodedMessage = Buffer.alloc(3 + Buffer.byteLength(payload, 'utf8'));
+        EncodedMessage[0] = command;
+        EncodedMessage[1] = nonce;
+        EncodedMessage[2] = status;
+        EncodedMessage.fill(payload, 3);
+        return EncodedMessage;
     }
 
-    // public DecodeMessage = (): number | string => {
-    //     let number: number = 1;
-    //     let string: string = "aying";
-
-    //     return {number, string};
-    // }
+    public static DecodeMessage = (msgBuffer: Buffer): IMessage => {
+        let message: IMessage = {
+            command: msgBuffer[0],
+            nonce: msgBuffer[1],
+            status: msgBuffer[2],
+            payload: msgBuffer.slice(3).toString()
+        }
+        return message;
+    }
 }
 
 export default Helpers;

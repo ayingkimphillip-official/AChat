@@ -1,8 +1,8 @@
 import * as net from 'net';
 import UserService from './userService';
-import IUserService from '../../Common/Interfaces/IUserAccount';
 import Commands from '../../Common/Enums/Commands';
-import Response from '../../Common/Enums/Response';
+import MessageType from '../../Common/Enums/MessageType';
+import Helpers from '../../Common/helperFunctions';
 
 class Program {
     static Port: number = 1337;
@@ -20,41 +20,105 @@ class Program {
     static OnClientConnection = (socket: net.Socket) => {
         console.log(`Client connected: ${socket.remoteAddress}:${socket.remotePort}`);
         socket.on('data', (data) => { Program.OnDataRecieved(socket, data) });
+        socket.on('close', () => { Program.UserService.LogoutAccount(socket) });
     }
 
     static OnDataRecieved = (socket: net.Socket, data: Buffer) => {
-        let request = data.toString().split('/');
-        let command = parseInt(request[0]);
+        let DecodedMessage = Helpers.DecodeMessage(data);
+        console.log(DecodedMessage);
+
+        let command: Commands = DecodedMessage.command;
+        let nonce: number = DecodedMessage.nonce;
+        let request: string[] = DecodedMessage.payload.split('/');
 
         switch (command) {
             case Commands.REGISTER:
-                Program.Register(socket, request);
+                Program.Register(socket, nonce, request);
                 break;
             case Commands.LOGIN:
-                Program.Login(socket, request);
+                Program.Login(socket, nonce, request);
+                break;
+            case Commands.LOGOUT:
+                Program.Logout(socket, nonce);
+                break;
+            case Commands.WHISPER:
+                Program.Whisper(socket, nonce, request);
+                break;
+            case Commands.SUBSCRIBE:
+                Program.Subscribe(socket, nonce, request);
+                break;
+            case Commands.UNSUBSCRIBE:
+                Program.Unsubscribe(socket, nonce, request);
+                break;
+            case Commands.GROUPCHAT:
+                Program.Groupchat(socket, nonce, request);
                 break;
             default:
                 break;
         }
-    };
+    }
 
-    static Register = (socket: net.Socket, request: string[]) => {
-        if (request.length == 3) {
-            let username = request[1];
-            let password = request[2];
-            let result = Program.UserService.RegisterAccount(username, password);
-            if (result == true) socket.write(`${parseInt(request[0])}/''/${Response.SUCCESS}`);
-            else socket.write(`${parseInt(request[0])}/${result}/${Response.FAIL}`);
+    static Register = (socket: net.Socket, nonce: number, request: string[]): void => {
+        if (request.length == 2) {
+            let Username: string = request[0];
+            let Password: string = request[1];
+            let result: true | string = Program.UserService.RegisterAccount(Username, Password);
+            if (result == true) socket.write(Helpers.EncodeMessage(Commands.REGISTER, nonce, MessageType.SUCCESS, ''));
+            else socket.write(Helpers.EncodeMessage(Commands.REGISTER, nonce, MessageType.FAIL, `${result}`));
         }
     }
 
-    static Login = (socket: net.Socket, request: string[]) => {
-        if (request.length == 3) {
-            let username = request[1];
-            let password = request[2];
-            let result = Program.UserService.LoginAccount(socket, username, password);
-            if (result == true) socket.write(`${parseInt(request[0])}/''/${Response.SUCCESS}`);
-            else socket.write(`${parseInt(request[0])}/${result}/${Response.FAIL}`);
+    static Login = (socket: net.Socket, nonce: number, request: string[]): void => {
+        if (request.length == 2) {
+            let Username: string = request[0];
+            let Password: string = request[1];
+            let result: true | string = Program.UserService.LoginAccount(socket, Username, Password);
+            if (result == true) socket.write(Helpers.EncodeMessage(Commands.LOGIN, nonce, MessageType.SUCCESS, ''));
+            else socket.write(Helpers.EncodeMessage(Commands.LOGIN, nonce, MessageType.FAIL, `${result}`));
+        }
+    }
+
+    static Logout = (socket: net.Socket, nonce: number): void => {
+        let result: true | string = Program.UserService.LogoutAccount(socket);
+        if (result == true) socket.write(Helpers.EncodeMessage(Commands.LOGOUT, nonce, MessageType.SUCCESS, ''));
+        else socket.write(Helpers.EncodeMessage(Commands.LOGOUT, nonce, MessageType.FAIL, `${result}`));
+    }
+
+    static Whisper = (socket: net.Socket, nonce: number, request: string[]): void => {
+        if (request.length == 2) {
+            let Reciever: string = request[0];
+            let Message: string = request[1];
+            let result: true | string = Program.UserService.Whisper(socket, nonce, Reciever, Message);
+            if (result == true) socket.write(Helpers.EncodeMessage(Commands.WHISPER, nonce, MessageType.SUCCESS, ''));
+            else socket.write(Helpers.EncodeMessage(Commands.WHISPER, nonce, MessageType.FAIL, `${result}`));
+        }
+    }
+
+    static Subscribe = (socket: net.Socket, nonce: number, request: string[]): void => {
+        if (request.length == 1) {
+            let Groupchat: string = request[0];
+            let result: true | string = Program.UserService.Subscribe(socket, Groupchat);
+            if (result == true) socket.write(Helpers.EncodeMessage(Commands.SUBSCRIBE, nonce, MessageType.SUCCESS, ''));
+            else socket.write(Helpers.EncodeMessage(Commands.SUBSCRIBE, nonce, MessageType.FAIL, `${result}`));
+        }
+    }
+
+    static Unsubscribe = (socket: net.Socket, nonce: number, request: string[]): void => {
+        if (request.length == 1) {
+            let Groupchat: string = request[0];
+            let result: true | string = Program.UserService.Unsubscribe(socket, Groupchat);
+            if (result == true) socket.write(Helpers.EncodeMessage(Commands.UNSUBSCRIBE, nonce, MessageType.SUCCESS, ''));
+            else socket.write(Helpers.EncodeMessage(Commands.UNSUBSCRIBE, nonce, MessageType.FAIL, `${result}`));
+        }
+    }
+
+    static Groupchat = (socket: net.Socket, nonce: number, request: string[]): void => {
+        if (request.length == 2) {
+            let Group: string = request[0];
+            let Message: string = request[1];
+            let result: true | string = Program.UserService.Groupchat(socket, nonce, Group, Message);
+            if (result == true) socket.write(Helpers.EncodeMessage(Commands.GROUPCHAT, nonce, MessageType.SUCCESS, ''));
+            else socket.write(Helpers.EncodeMessage(Commands.GROUPCHAT, nonce, MessageType.FAIL, `${result}`));
         }
     }
 }
