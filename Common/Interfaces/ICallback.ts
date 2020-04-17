@@ -1,6 +1,6 @@
-interface Callback {
+interface ICallback {
     nonce: number,
     callback: (command: number, status: number, payload: string) => void,
 }
 
-export default Callback
+export default ICallback;

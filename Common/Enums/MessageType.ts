@@ -1,4 +1,4 @@
-enum MessageType {
+enum MessageTypes {
     REQUEST = 0,
     SUCCESS,
     FAIL,
@@ -6,4 +6,4 @@ enum MessageType {
     TOGROUP = 7,
 }
 
-export default MessageType;
+export default MessageTypes;

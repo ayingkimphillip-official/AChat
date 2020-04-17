@@ -1,9 +1,11 @@
 import Commands from '../Enums/Commands';
-import MessageType from '../Enums/MessageType';
+import MessageTypes from '../Enums/MessageType';
 
-export default interface IMessage {
+interface IMessage {
     command: Commands,
     nonce: number,
-    status: MessageType,
+    status: MessageTypes,
     payload: string
 }
+
+export default IMessage;
