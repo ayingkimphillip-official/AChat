@@ -208,6 +208,7 @@ class Program {
         }
         else displayResult += `Failed: ${payload}`;
         console.log(displayResult);
+        if (Program.Nonce > 255) Program.Nonce = 1;
     }
 
     static SearchCallbackArray = (Response: IMessage): void => {
