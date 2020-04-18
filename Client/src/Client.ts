@@ -1,8 +1,8 @@
 import * as net from 'net';
 import readline from 'readline';
 import Commands from '../../Common/Enums/Commands';
-import MessageTypes from '../../Common/Enums/MessageType';
-import ClientCommands from './clientCommands';
+import MessageTypes from '../../Common/Enums/MessageTypes';
+import ClientCommands from './Enums/ClientCommands';
 import Helpers from '../../Common/helperFunctions';
 import ICallback from '../../Common/Interfaces/ICallback';
 import IMessage from '../../Common/Interfaces/IMessage';

@@ -1,7 +1,7 @@
 import * as net from 'net';
-import UserService from './userService';
+import UserService from './Services/UserService';
 import Commands from '../../Common/Enums/Commands';
-import MessageTypes from '../../Common/Enums/MessageType';
+import MessageTypes from '../../Common/Enums/MessageTypes';
 import Helpers from '../../Common/helperFunctions';
 import IMessage from '../../Common/Interfaces/IMessage';
 
@@ -12,6 +12,9 @@ class Program {
     static UserService: UserService;
 
     static Main(args: string[]) {
+        // Program.ConnectionService = new ConnectionService();
+        // Program.ConnectionService.StartServer();
+
         Program.Server = net.createServer();
         Program.UserService = new UserService();
         Program.Server.listen(Program.Port, Program.Address);

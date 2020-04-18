@@ -1,10 +1,10 @@
-import IUserAccount from '../../Common/Interfaces/IUserAccount';
-import ILoggedInAccount from '../../Common/Interfaces/ILoggedInAccounts';
-import ISubscription from '../../Common/Interfaces/ISubscription';
+import IUserAccount from '../../../Common/Interfaces/IUserAccount';
+import ILoggedInAccount from '../../../Common/Interfaces/ILoggedInAccount';
+import ISubscription from '../../../Common/Interfaces/ISubscription';
 import * as net from 'net';
-import Helpers from '../../Common/helperFunctions';
-import Commands from '../../Common/Enums/Commands';
-import MessageTypes from '../../Common/Enums/MessageType';
+import Helpers from '../../../Common/helperFunctions';
+import Commands from '../../../Common/Enums/Commands';
+import MessageTypes from '../../../Common/Enums/MessageTypes';
 
 class UserService {
     private UserAccounts: IUserAccount[];
