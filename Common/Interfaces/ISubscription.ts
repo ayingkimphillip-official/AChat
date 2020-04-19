@@ -1,6 +1,4 @@
-interface ISubscription {
+export default interface ISubscription {
     GroupName: string,
     Subscriber: string,
 }
-
-export default ISubscription;

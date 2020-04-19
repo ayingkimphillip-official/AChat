@@ -1,8 +1,6 @@
 import * as net from 'net';
 
-interface ILoggedInAccount {
+export default interface ILoggedInAccount {
     Socket: net.Socket;
     Username: string;
 }
-
-export default ILoggedInAccount;

@@ -6,9 +6,9 @@ import Helpers from '../../../Common/helperFunctions';
 import Commands from '../../../Common/Enums/Commands';
 import MessageTypes from '../../../Common/Enums/MessageTypes';
 
-class UserService {
-    private UserAccounts: IUserAccount[];
-    private LoggedInAccounts: ILoggedInAccount[];
+export default class UserService {
+    public UserAccounts: IUserAccount[];
+    public LoggedInAccounts: ILoggedInAccount[];
     private Subscriptions: ISubscription[];
 
     constructor() {
@@ -60,7 +60,8 @@ class UserService {
         if (User == false) return 'User not logged in';
 
         for (let i = 0; i < this.LoggedInAccounts.length; i++) {
-            if (this.LoggedInAccounts[i].Username == User) {
+            if (this.LoggedInAccounts[i].Socket.remoteAddress == socket.remoteAddress &&
+                this.LoggedInAccounts[i].Socket.remotePort == socket.remotePort) {
                 this.LoggedInAccounts.splice(i, 1);
                 return true;
             }
@@ -198,5 +199,3 @@ class UserService {
         return this.UserAccounts;
     }
 }
-
-export default UserService;

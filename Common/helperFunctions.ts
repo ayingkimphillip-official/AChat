@@ -1,6 +1,6 @@
 import IMessage from './Interfaces/IMessage';
 
-class Helpers {
+export default class Helpers {
     public static EncodeMessage = (command: number, nonce: number, status: number, payload: string): Buffer => {
         let EncodedMessage = Buffer.alloc(3 + Buffer.byteLength(payload, 'utf8'));
         EncodedMessage[0] = command;
@@ -20,5 +20,3 @@ class Helpers {
         return message;
     }
 }
-
-export default Helpers;
