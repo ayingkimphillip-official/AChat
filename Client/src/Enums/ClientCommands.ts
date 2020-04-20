@@ -3,8 +3,8 @@ enum ClientCommands {
     LOGIN = "/login",
     LOGOUT = "/logout",
     WHISPER = "/w",
-    SUBSCRIBE = "/subscribe",
-    UNSUBSCRIBE = "/unsubscribe",
+    SUBSCRIBE = "/sub",
+    UNSUBSCRIBE = "/unsub",
     GROUPCHAT = "/group",
     SEND = "/send",
 }
