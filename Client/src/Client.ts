@@ -37,25 +37,25 @@ class Program {
 
             switch (Params[0]) {
                 case ClientCommands.REGISTER:
-                    Program.Register(Params);
+                    Program.ProcessRegister(Params);
                     break;
                 case ClientCommands.LOGIN:
-                    Program.Login(Params);
+                    Program.ProcessLogin(Params);
                     break;
                 case ClientCommands.LOGOUT:
-                    Program.Logout(Params);
+                    Program.ProcessLogout(Params);
                     break;
                 case ClientCommands.WHISPER:
-                    Program.Whisper(Params);
+                    Program.ProcessWhisper(Params);
                     break;
                 case ClientCommands.SUBSCRIBE:
-                    Program.Subscribe(Params);
+                    Program.ProcessSubscribe(Params);
                     break;
                 case ClientCommands.UNSUBSCRIBE:
-                    Program.Unsubscribe(Params);
+                    Program.ProcessUnsubscribe(Params);
                     break;
                 case ClientCommands.GROUPCHAT:
-                    Program.Groupchat(Params);
+                    Program.ProcessGroupchat(Params);
                     break;
                 default:
                     break;
@@ -95,7 +95,7 @@ class Program {
         }
     }
 
-    static Register = (params: string[]): void => {
+    static ProcessRegister = (params: string[]): void => {
         if (params.length == 3) {
             let Username: string = params[1];
             let Password: string = params[2];
@@ -108,7 +108,7 @@ class Program {
         }
     }
 
-    static Login = (params: string[]): void => {
+    static ProcessLogin = (params: string[]): void => {
         if (params.length == 3) {
             let Username: string = params[1];
             let Password: string = params[2];
@@ -121,7 +121,7 @@ class Program {
         }
     }
 
-    static Logout = (params: string[]): void => {
+    static ProcessLogout = (params: string[]): void => {
         if (params.length == 1) {
             Program.Socket.write(Helpers.EncodeMessage(Commands.LOGOUT, Program.Nonce, MessageTypes.REQUEST, ""));
             Program.CallbackArray.push({
@@ -131,7 +131,7 @@ class Program {
         }
     }
 
-    static Whisper = (params: string[]): void => {
+    static ProcessWhisper = (params: string[]): void => {
         let Reciever: string = params[1];
         let MessageHolder: string[] = params.slice(2);
         let Message: string = MessageHolder.join(" ");
@@ -143,7 +143,7 @@ class Program {
         });
     }
 
-    static Subscribe = (params: string[]): void => {
+    static ProcessSubscribe = (params: string[]): void => {
         if (params.length == 2) {
             let Group: string = params[1];
 
@@ -155,7 +155,7 @@ class Program {
         }
     }
 
-    static Unsubscribe = (params: string[]): void => {
+    static ProcessUnsubscribe = (params: string[]): void => {
         if (params.length == 2) {
             let Group: string = params[1];
 
@@ -167,7 +167,7 @@ class Program {
         }
     }
 
-    static Groupchat = (params: string[]): void => {
+    static ProcessGroupchat = (params: string[]): void => {
         let Group: string = params[1];
         let MessageHolder: string[] = params.slice(2);
         let Message: string = MessageHolder.join(" ");

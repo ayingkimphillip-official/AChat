@@ -18,8 +18,8 @@ export default class UserService {
         UserService.LoggedInAccounts = [];
     }
 
-    static RegisterAccount = (username: string, password: string): true | string => {
-        let IsSanitized = UserService.SanitizeAccount(username, password);
+    static Register = (username: string, password: string): true | string => {
+        let IsSanitized = UserService.Sanitize(username, password);
 
         if (!IsSanitized) return 'Invalid Username or Password';
 
@@ -36,8 +36,8 @@ export default class UserService {
         return true;
     }
 
-    static LoginAccount = (socket: net.Socket, username: string, password: string): true | string => {
-        let IsSanitized = UserService.SanitizeAccount(username, password);
+    static Login = (socket: net.Socket, username: string, password: string): true | string => {
+        let IsSanitized = UserService.Sanitize(username, password);
         if (!IsSanitized) return 'Invalid Username or Password';
 
         let IsUnique = UserService.FindUnique(username, password);
@@ -55,7 +55,7 @@ export default class UserService {
         return true;
     }
 
-    static LogoutAccount = (socket: net.Socket): true | string => {
+    static Logout = (socket: net.Socket): true | string => {
         let User = UserService.GetSocketUser(socket);
 
         if (User == false) return 'User not logged in';
@@ -70,7 +70,7 @@ export default class UserService {
         return '';
     }
 
-    static SanitizeAccount = (username: string, password: string): boolean => {
+    static Sanitize = (username: string, password: string): boolean => {
         if (username && username.length >= 4 && password && password.length >= 4) {
             return true;
         }

@@ -29,7 +29,7 @@ class Program {
     static OnClientConnection = (socket: net.Socket): void => {
         console.log(`Client connected: ${socket.remoteAddress}:${socket.remotePort}`);
         socket.on('data', (data) => { Program.OnDataRecieved(socket, data) });
-        socket.on('close', () => { UserService.LogoutAccount(socket) });
+        socket.on('close', () => { UserService.Logout(socket) });
     }
 
     static OnDataRecieved = (socket: net.Socket, data: Buffer): void => {
@@ -42,55 +42,55 @@ class Program {
 
         switch (command) {
             case Commands.REGISTER:
-                Program.Register(socket, nonce, request, command);
+                Program.ProcessRegister(socket, nonce, request, command);
                 break;
             case Commands.LOGIN:
-                Program.Login(socket, nonce, request, command);
+                Program.ProcessLogin(socket, nonce, request, command);
                 break;
             case Commands.LOGOUT:
-                Program.Logout(socket, nonce, command);
+                Program.ProcessLogout(socket, nonce, command);
                 break;
             case Commands.WHISPER:
-                Program.Whisper(socket, nonce, request, command);
+                Program.ProcessWhisper(socket, nonce, request, command);
                 break;
             case Commands.SUBSCRIBE:
-                Program.Subscribe(socket, nonce, request, command);
+                Program.ProcessSubscribe(socket, nonce, request, command);
                 break;
             case Commands.UNSUBSCRIBE:
-                Program.Unsubscribe(socket, nonce, request, command);
+                Program.ProcessUnsubscribe(socket, nonce, request, command);
                 break;
             case Commands.GROUPCHAT:
-                Program.Groupchat(socket, nonce, request, command);
+                Program.ProcessGroupchat(socket, nonce, request, command);
                 break;
             default:
                 break;
         }
     }
 
-    static Register = (socket: net.Socket, nonce: number, request: string[], command: number): void => {
+    static ProcessRegister = (socket: net.Socket, nonce: number, request: string[], command: number): void => {
         if (request.length == 2) {
             let Username: string = request[0];
             let Password: string = request[1];
-            let result: true | string = UserService.RegisterAccount(Username, Password);
+            let result: true | string = UserService.Register(Username, Password);
             Program.Response(socket, result, nonce, command);
         }
     }
 
-    static Login = (socket: net.Socket, nonce: number, request: string[], command: number): void => {
+    static ProcessLogin = (socket: net.Socket, nonce: number, request: string[], command: number): void => {
         if (request.length == 2) {
             let Username: string = request[0];
             let Password: string = request[1];
-            let result: true | string = UserService.LoginAccount(socket, Username, Password);
+            let result: true | string = UserService.Login(socket, Username, Password);
             Program.Response(socket, result, nonce, command);
         }
     }
 
-    static Logout = (socket: net.Socket, nonce: number, command: number): void => {
-        let result: true | string = UserService.LogoutAccount(socket);
+    static ProcessLogout = (socket: net.Socket, nonce: number, command: number): void => {
+        let result: true | string = UserService.Logout(socket);
         Program.Response(socket, result, nonce, command);
     }
 
-    static Whisper = (socket: net.Socket, nonce: number, request: string[], command: number): void => {
+    static ProcessWhisper = (socket: net.Socket, nonce: number, request: string[], command: number): void => {
         if (request.length == 2) {
             let Reciever: string = request[0];
             let Message: string = request[1];
@@ -99,7 +99,7 @@ class Program {
         }
     }
 
-    static Subscribe = (socket: net.Socket, nonce: number, request: string[], command: number): void => {
+    static ProcessSubscribe = (socket: net.Socket, nonce: number, request: string[], command: number): void => {
         if (request.length == 1) {
             let Groupchat: string = request[0];
             let result: true | string = ChatService.Subscribe(socket, Groupchat);
@@ -107,7 +107,7 @@ class Program {
         }
     }
 
-    static Unsubscribe = (socket: net.Socket, nonce: number, request: string[], command: number): void => {
+    static ProcessUnsubscribe = (socket: net.Socket, nonce: number, request: string[], command: number): void => {
         if (request.length == 1) {
             let Groupchat: string = request[0];
             let result: true | string = ChatService.Unsubscribe(socket, Groupchat);
@@ -115,7 +115,7 @@ class Program {
         }
     }
 
-    static Groupchat = (socket: net.Socket, nonce: number, request: string[], command: number): void => {
+    static ProcessGroupchat = (socket: net.Socket, nonce: number, request: string[], command: number): void => {
         if (request.length == 2) {
             let Group: string = request[0];
             let Message: string = request[1];
