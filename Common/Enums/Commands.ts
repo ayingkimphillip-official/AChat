@@ -6,6 +6,7 @@ enum Commands {
     SUBSCRIBE,
     UNSUBSCRIBE,
     GROUPCHAT,
+    SEND,
 }
 
 export default Commands;

@@ -1,0 +1,14 @@
+HELLO WORLD
+
+
+In order of priority:
+1.) Send file to another user.
+    a.) Request permission from reciever.
+    b.) Send via Buffer.
+
+2.) Migrate Databases from Arrays to DBs.
+    a.) Download MariaDB.
+    b.) Setup MariaDB.
+    c.) Code Database.
+
+3.) Deploy to Server.

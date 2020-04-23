@@ -1,14 +1,14 @@
 import * as net from 'net';
 
 import UserService from './Services/UserService';
-import Groupchat from './Services/ChatService';
+import ChatService from './Services/ChatService';
+import FileService from './Services/FileService';
 
 import Commands from '../../Common/Enums/Commands';
 import MessageTypes from '../../Common/Enums/MessageTypes';
 import Helpers from '../../Common/helperFunctions';
 import IMessage from '../../Common/Interfaces/IMessage';
-import ChatService from './Services/ChatService';
-
+import IFile from '../../Common/Interfaces/IFile';
 
 class Program {
     static Port: number = 1337;
@@ -16,11 +16,13 @@ class Program {
     static Server: net.Server;
     static UserService: UserService;
     static ChatService: ChatService;
+    static FileService: FileService;
 
     static Main(args: string[]) {
         Program.Server = net.createServer();
         Program.UserService = new UserService();
         Program.ChatService = new ChatService();
+        Program.FileService = new FileService();
 
         Program.Server.listen(Program.Port, Program.Address);
         Program.Server.on('connection', Program.OnClientConnection);
@@ -33,12 +35,18 @@ class Program {
     }
 
     static OnDataRecieved = (socket: net.Socket, data: Buffer): void => {
-        let DecodedMessage: IMessage = Helpers.DecodeMessage(data);
-        console.log(DecodedMessage);
+        let decodedMessage: IMessage = Helpers.DecodeMessage(data);
+        // let decodedFile: IFile = Helpers.DecodeFile(data);
+        console.log(decodedMessage);
+        // console.log(decodedFile);
 
-        let command: Commands = DecodedMessage.command;
-        let nonce: number = DecodedMessage.nonce;
-        let request: string[] = DecodedMessage.payload.split('/');
+        let command: Commands = decodedMessage.command;
+        let nonce: number = decodedMessage.nonce;
+        let request: string[] = decodedMessage.payload.split('/');
+
+        // let fileSize: bigint = decodedFile.fileSize;
+        // let requestFile: string[] = decodedFile.payload.split('/');
+        // console.log(requestFile);
 
         switch (command) {
             case Commands.REGISTER:
@@ -62,25 +70,42 @@ class Program {
             case Commands.GROUPCHAT:
                 Program.ProcessGroupchat(socket, nonce, request, command);
                 break;
+            // case Commands.SEND:
+            //     Program.ProcessFile(socket, nonce, fileSize, requestFile, command)
+            //     break;
             default:
                 break;
         }
     }
 
+    // static ProcessFile = (socket: net.Socket, nonce: number, filesize: bigint, requestFile: string[], command: number): void => {
+    //     if (requestFile.length == 3) {
+    //         const receiver: string = requestFile[0];
+    //         const fileName: string = requestFile[1];
+    //         const receiverAddress: string = requestFile[2];
+
+    //         let result: boolean = FileService.GetPermission(socket, filesize, receiver, fileName, receiverAddress);
+    //         // Program.Response(socket,result, nonce, command);
+    //     }
+    // }
+
+
+
+
     static ProcessRegister = (socket: net.Socket, nonce: number, request: string[], command: number): void => {
         if (request.length == 2) {
-            let Username: string = request[0];
-            let Password: string = request[1];
-            let result: true | string = UserService.Register(Username, Password);
+            let username: string = request[0];
+            let password: string = request[1];
+            let result: true | string = UserService.Register(username, password);
             Program.Response(socket, result, nonce, command);
         }
     }
 
     static ProcessLogin = (socket: net.Socket, nonce: number, request: string[], command: number): void => {
         if (request.length == 2) {
-            let Username: string = request[0];
-            let Password: string = request[1];
-            let result: true | string = UserService.Login(socket, Username, Password);
+            let username: string = request[0];
+            let password: string = request[1];
+            let result: true | string = UserService.Login(socket, username, password);
             Program.Response(socket, result, nonce, command);
         }
     }
@@ -92,34 +117,34 @@ class Program {
 
     static ProcessWhisper = (socket: net.Socket, nonce: number, request: string[], command: number): void => {
         if (request.length == 2) {
-            let Reciever: string = request[0];
-            let Message: string = request[1];
-            let result: true | string = ChatService.Whisper(socket, nonce, Reciever, Message);
+            let reciever: string = request[0];
+            let message: string = request[1];
+            let result: true | string = ChatService.Whisper(socket, nonce, reciever, message);
             Program.Response(socket, result, nonce, command);
         }
     }
 
     static ProcessSubscribe = (socket: net.Socket, nonce: number, request: string[], command: number): void => {
         if (request.length == 1) {
-            let Groupchat: string = request[0];
-            let result: true | string = ChatService.Subscribe(socket, Groupchat);
+            let groupchat: string = request[0];
+            let result: true | string = ChatService.Subscribe(socket, groupchat);
             Program.Response(socket, result, nonce, command);
         }
     }
 
     static ProcessUnsubscribe = (socket: net.Socket, nonce: number, request: string[], command: number): void => {
         if (request.length == 1) {
-            let Groupchat: string = request[0];
-            let result: true | string = ChatService.Unsubscribe(socket, Groupchat);
+            let groupchat: string = request[0];
+            let result: true | string = ChatService.Unsubscribe(socket, groupchat);
             Program.Response(socket, result, nonce, command);
         }
     }
 
     static ProcessGroupchat = (socket: net.Socket, nonce: number, request: string[], command: number): void => {
         if (request.length == 2) {
-            let Group: string = request[0];
-            let Message: string = request[1];
-            let result: true | string = ChatService.Groupchat(socket, nonce, Group, Message);
+            let group: string = request[0];
+            let message: string = request[1];
+            let result: true | string = ChatService.Groupchat(socket, nonce, group, message);
             Program.Response(socket, result, nonce, command);
         }
     }

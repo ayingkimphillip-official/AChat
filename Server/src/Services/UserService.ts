@@ -2,11 +2,6 @@ import * as net from 'net';
 
 import IUserAccount from '../../../Common/Interfaces/IUserAccount';
 import ILoggedInAccount from '../../../Common/Interfaces/ILoggedInAccount';
-import ISubscription from '../../../Common/Interfaces/ISubscription';
-import Commands from '../../../Common/Enums/Commands';
-import MessageTypes from '../../../Common/Enums/MessageTypes';
-
-import Helpers from '../../../Common/helperFunctions';
 
 
 export default class UserService {
@@ -77,7 +72,7 @@ export default class UserService {
         else return false;
     }
 
-    static FindUnique = (username: string, password: string) => {
+    static FindUnique = (username: string, password: string): boolean => {
         for (let i = 0; i < UserService.UserAccounts.length; i++) {
             if (UserService.UserAccounts[i].Username == username &&
                 UserService.UserAccounts[i].Password == password) {

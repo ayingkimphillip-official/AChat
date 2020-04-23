@@ -1,10 +1,12 @@
 import * as net from 'net';
 import readline from 'readline';
+import filesystem from 'fs';
 
 import Commands from '../../Common/Enums/Commands';
 import MessageTypes from '../../Common/Enums/MessageTypes';
 import ICallback from '../../Common/Interfaces/ICallback';
 import IMessage from '../../Common/Interfaces/IMessage';
+import Ifile from '../../Common/Interfaces/IFile';
 
 import ClientCommands from './Enums/ClientCommands';
 import Helpers from '../../Common/helperFunctions';
@@ -32,6 +34,11 @@ class Program {
     static OnServerConnection = (): void => {
         console.log("Connected to Server");
 
+        filesystem.readFile('/home/aying/Documents/Projects/AChat/hello.txt', (err, data) => {
+            // console.log(err);
+            // console.log(data.length);
+        });
+
         Program.Interface.on('line', (line: string): void => {
             let Params: string[] = line.split(' ');
 
@@ -57,14 +64,63 @@ class Program {
                 case ClientCommands.GROUPCHAT:
                     Program.ProcessGroupchat(Params);
                     break;
+                case ClientCommands.SEND:
+                    Program.ProcessFileSize(Params);
+                    break;
                 default:
                     break;
             }
         })
     }
 
+    static ProcessFileSize = (params: string[]): void => {
+        let fileSize: bigint = BigInt(params[1]);
+        let reciever: string = params[2];
+        let filename: string = params[3];
+        let addressPort: string = params[4];
+
+        Program.Socket.write(Helpers.EncodeFile(Commands.SEND, Program.Nonce, MessageTypes.REQUEST, fileSize, `${reciever}/${filename}/${addressPort}`));
+
+        // for (let i = 0; i < fileSizeBuf.length; i++) {
+        //     if (fileSize == 0) {
+        //         fileSizeBuf[fileSizeBuf.length - (i + 1)] = 0;
+        //         console.log("first", fileSizeBuf);
+        //         break;
+        //     }
+
+        //     if (fileSize != 0 && fileSize < Bytes) {
+        //         fileSizeBuf[fileSizeBuf.length - (i + 1)] = fileSize;
+        //         console.log("second", fileSizeBuf);
+        //         break;
+        //     }
+
+        //     if (fileSize != 0 && fileSize >= Bytes) {
+        //         remainder = fileSize % (Bytes - 1);
+        //         fileSize = fileSize / Bytes;
+        //         console.log("First if", remainder);
+
+        //         if (remainder == 0) {
+        //             fileSizeBuf[fileSizeBuf.length - (i + 1)] = fileSize;
+        //             console.log("third", fileSizeBuf);
+        //         }
+        //         else {
+        //             console.log(remainder);
+        //             console.log(fileSize);
+        //             fileSizeBuf[fileSizeBuf.length - (i + 1)] = remainder;
+        //             fileSizeBuf[fileSizeBuf.length - (i + 2)] = fileSize;
+        //             console.log("Here!");
+        //             break;
+        //         }
+        //     }
+        // }
+    }
+
+
     static OnDataRecieved = (data: Buffer): void => {
+        console.log(data);
         let Response: IMessage = Helpers.DecodeMessage(data);
+        // let fileResponse: Ifile = Helpers.DecodeFile(data);
+        // console.log(fileResponse);
 
         switch (Response.command) {
             case Commands.REGISTER:
@@ -100,7 +156,10 @@ class Program {
             let Username: string = params[1];
             let Password: string = params[2];
 
+            const a: number = 64;
+
             Program.Socket.write(Helpers.EncodeMessage(Commands.REGISTER, Program.Nonce, MessageTypes.REQUEST, `${Username}/${Password}`));
+            // Program.Socket.write(Helpers.EncodeMessage(a, Program.Nonce, MessageTypes.REQUEST, `${Username}/${Password}`));
             Program.CallbackArray.push({
                 nonce: Program.Nonce++,
                 callback: Program.Callback
