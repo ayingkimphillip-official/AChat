@@ -1,15 +1,17 @@
 import * as net from 'net';
 import readline from 'readline';
-import filesystem from 'fs';
+import filesystem, { write } from 'fs';
 
 import Commands from '../../Common/Enums/Commands';
 import MessageTypes from '../../Common/Enums/MessageTypes';
 import ICallback from '../../Common/Interfaces/ICallback';
 import IMessage from '../../Common/Interfaces/IMessage';
-import Ifile from '../../Common/Interfaces/IFile';
+import IPermission from '../../Common/Interfaces/IPermission';
+import IFileTable from '../../Common/Interfaces/IFileTable';
 
 import ClientCommands from './Enums/ClientCommands';
 import Helpers from '../../Common/helperFunctions';
+import IResponse from '../../Common/Interfaces/IResponse';
 
 
 class Program {
@@ -34,38 +36,36 @@ class Program {
     static OnServerConnection = (): void => {
         console.log("Connected to Server");
 
-        filesystem.readFile('/home/aying/Documents/Projects/AChat/hello.txt', (err, data) => {
-            // console.log(err);
-            // console.log(data.length);
-        });
-
         Program.Interface.on('line', (line: string): void => {
-            let Params: string[] = line.split(' ');
+            let params: string[] = line.split(' ');
 
-            switch (Params[0]) {
+            switch (params[0]) {
                 case ClientCommands.REGISTER:
-                    Program.ProcessRegister(Params);
+                    Program.ProcessRegister(params);
                     break;
                 case ClientCommands.LOGIN:
-                    Program.ProcessLogin(Params);
+                    Program.ProcessLogin(params);
                     break;
                 case ClientCommands.LOGOUT:
-                    Program.ProcessLogout(Params);
+                    Program.ProcessLogout(params);
                     break;
                 case ClientCommands.WHISPER:
-                    Program.ProcessWhisper(Params);
+                    Program.ProcessWhisper(params);
                     break;
                 case ClientCommands.SUBSCRIBE:
-                    Program.ProcessSubscribe(Params);
+                    Program.ProcessSubscribe(params);
                     break;
                 case ClientCommands.UNSUBSCRIBE:
-                    Program.ProcessUnsubscribe(Params);
+                    Program.ProcessUnsubscribe(params);
                     break;
                 case ClientCommands.GROUPCHAT:
-                    Program.ProcessGroupchat(Params);
+                    Program.ProcessGroupchat(params);
                     break;
                 case ClientCommands.SEND:
-                    Program.ProcessFileSize(Params);
+                    Program.ProcessSendPermissionReqeust(params);
+                    break;
+                case ClientCommands.RESPOND:
+                    Program.ProcessSendPermissionResponse(params);
                     break;
                 default:
                     break;
@@ -73,80 +73,96 @@ class Program {
         })
     }
 
-    static ProcessFileSize = (params: string[]): void => {
-        let fileSize: bigint = BigInt(params[1]);
-        let reciever: string = params[2];
-        let filename: string = params[3];
-        let addressPort: string = params[4];
+    static ProcessSendPermissionReqeust = (params: string[]): void => {
+        if (params.length == 5) {
+            let fileSize: bigint = BigInt(params[1]);
+            let reciever: string = params[2];
+            let filename: string = params[3];
+            let addressPort: string = params[4]; //to be deleted
 
-        Program.Socket.write(Helpers.EncodeFile(Commands.SEND, Program.Nonce, MessageTypes.REQUEST, fileSize, `${reciever}/${filename}/${addressPort}`));
-
-        // for (let i = 0; i < fileSizeBuf.length; i++) {
-        //     if (fileSize == 0) {
-        //         fileSizeBuf[fileSizeBuf.length - (i + 1)] = 0;
-        //         console.log("first", fileSizeBuf);
-        //         break;
-        //     }
-
-        //     if (fileSize != 0 && fileSize < Bytes) {
-        //         fileSizeBuf[fileSizeBuf.length - (i + 1)] = fileSize;
-        //         console.log("second", fileSizeBuf);
-        //         break;
-        //     }
-
-        //     if (fileSize != 0 && fileSize >= Bytes) {
-        //         remainder = fileSize % (Bytes - 1);
-        //         fileSize = fileSize / Bytes;
-        //         console.log("First if", remainder);
-
-        //         if (remainder == 0) {
-        //             fileSizeBuf[fileSizeBuf.length - (i + 1)] = fileSize;
-        //             console.log("third", fileSizeBuf);
-        //         }
-        //         else {
-        //             console.log(remainder);
-        //             console.log(fileSize);
-        //             fileSizeBuf[fileSizeBuf.length - (i + 1)] = remainder;
-        //             fileSizeBuf[fileSizeBuf.length - (i + 2)] = fileSize;
-        //             console.log("Here!");
-        //             break;
-        //         }
-        //     }
-        // }
+            Program.Socket.write(Helpers.EncodePermission(Commands.SEND, Program.Nonce, MessageTypes.REQUEST, fileSize, `${reciever}/${filename}/${addressPort}`));
+        }
     }
 
+    static ProcessReceivedPermissionRequest = (data: Buffer): void => {
+        let permissionRequest: IPermission = Helpers.DecodePermission(data);
+        let payload: string[] = permissionRequest.payload.split('/');
+        const fileSize: bigint = permissionRequest.fileSize;
+        const sender: string = payload[0];
+        const filename: string = payload[1];
+
+        console.log(`${sender} would like to send you a file: ${filename} (file size: ${fileSize})\r\n`);
+        console.log("Would you accept? Y/N");
+    }
+
+    static ProcessSendPermissionResponse = (params: string[]): void => {
+        if (params.length == 5) {
+            const response: number = parseInt(params[1]);
+            const sender: string = params[2];
+            const filename: string = params[3];
+            const addressPort: string = params[4];
+
+            Program.Socket.write(Helpers.EncodeResponse(Commands.RESPOND, 0, MessageTypes.SENDFILE, response, `${sender}/${filename}/${addressPort}`));
+        }
+    }
+
+    static ProcessReceivedPermissionResponse = (data: Buffer): void => {
+        let permissionResponse: IResponse = Helpers.DecodeResponse(data);
+        const payload: string = permissionResponse.payload;
+        const response: number = permissionResponse.response;
+
+        console.log(`Receiver response: ${payload}`);
+        if (response == MessageTypes.YES) {
+            filesystem.readFile('/home/aying/Documents/Projects/AChat/hello.txt', (err, data) => {
+                // console.log(err);
+                Program.Socket.write(data);
+            });
+        }
+    }
+
+    static ReceiveFile = (data: Buffer): void => {
+        console.log(data.toString());
+    }
 
     static OnDataRecieved = (data: Buffer): void => {
-        console.log(data);
-        let Response: IMessage = Helpers.DecodeMessage(data);
-        // let fileResponse: Ifile = Helpers.DecodeFile(data);
-        // console.log(fileResponse);
+        let response: IMessage = Helpers.DecodeMessage(data);
 
-        switch (Response.command) {
+        switch (response.command) {
             case Commands.REGISTER:
-                Program.SearchCallbackArray(Response);
+                Program.SearchCallbackArray(response);
                 break;
             case Commands.LOGIN:
-                Program.SearchCallbackArray(Response);
+                Program.SearchCallbackArray(response);
                 break;
             case Commands.LOGOUT:
-                Program.SearchCallbackArray(Response);
+                Program.SearchCallbackArray(response);
                 break;
             case Commands.WHISPER:
-                Program.SearchCallbackArray(Response);
-                Program.SendToOthers(Response);
+                Program.SearchCallbackArray(response);
+                Program.SendToOthers(response);
                 break;
             case Commands.SUBSCRIBE:
-                Program.SearchCallbackArray(Response);
+                Program.SearchCallbackArray(response);
                 break;
             case Commands.UNSUBSCRIBE:
-                Program.SearchCallbackArray(Response);
+                Program.SearchCallbackArray(response);
                 break;
             case Commands.GROUPCHAT:
-                Program.SearchCallbackArray(Response);
-                Program.SendToOthers(Response);
+                Program.SearchCallbackArray(response);
+                Program.SendToOthers(response);
+                break;
+            case Commands.SEND:
+                if (response.status == MessageTypes.SENDFILE) {
+                    Program.ProcessReceivedPermissionRequest(data);
+                }
+                break;
+            case Commands.RESPOND:
+                if (response.status == MessageTypes.SENDFILE) {
+                    Program.ProcessReceivedPermissionResponse(data);
+                }
                 break;
             default:
+                Program.ReceiveFile(data);
                 break;
         }
     }
@@ -156,10 +172,7 @@ class Program {
             let Username: string = params[1];
             let Password: string = params[2];
 
-            const a: number = 64;
-
             Program.Socket.write(Helpers.EncodeMessage(Commands.REGISTER, Program.Nonce, MessageTypes.REQUEST, `${Username}/${Password}`));
-            // Program.Socket.write(Helpers.EncodeMessage(a, Program.Nonce, MessageTypes.REQUEST, `${Username}/${Password}`));
             Program.CallbackArray.push({
                 nonce: Program.Nonce++,
                 callback: Program.Callback

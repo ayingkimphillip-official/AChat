@@ -7,6 +7,7 @@ enum ClientCommands {
     UNSUBSCRIBE = "/unsub",
     GROUPCHAT = "/group",
     SEND = "/send",
+    RESPOND = "/res",
 }
 
 export default ClientCommands;

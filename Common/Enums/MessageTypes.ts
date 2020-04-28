@@ -5,8 +5,8 @@ enum MessageTypes {
     TOUSER = 4,
     TOGROUP = 7,
     SENDFILE,
-    YES,
-    NO,
+    YES = 9,
+    NO = 10,
 }
 
 export default MessageTypes;

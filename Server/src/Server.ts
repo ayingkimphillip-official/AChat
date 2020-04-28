@@ -8,7 +8,8 @@ import Commands from '../../Common/Enums/Commands';
 import MessageTypes from '../../Common/Enums/MessageTypes';
 import Helpers from '../../Common/helperFunctions';
 import IMessage from '../../Common/Interfaces/IMessage';
-import IFile from '../../Common/Interfaces/IFile';
+import IPermission from '../../Common/Interfaces/IPermission';
+import IResponse from '../../Common/Interfaces/IResponse';
 
 class Program {
     static Port: number = 1337;
@@ -36,17 +37,18 @@ class Program {
 
     static OnDataRecieved = (socket: net.Socket, data: Buffer): void => {
         let decodedMessage: IMessage = Helpers.DecodeMessage(data);
-        // let decodedFile: IFile = Helpers.DecodeFile(data);
-        console.log(decodedMessage);
-        // console.log(decodedFile);
+        let decodedPermission: IPermission = Helpers.DecodePermission(data);
+        let decodedResponse: IResponse = Helpers.DecodeResponse(data);
 
-        let command: Commands = decodedMessage.command;
+        let command: Commands = data[0];
         let nonce: number = decodedMessage.nonce;
         let request: string[] = decodedMessage.payload.split('/');
 
-        // let fileSize: bigint = decodedFile.fileSize;
-        // let requestFile: string[] = decodedFile.payload.split('/');
-        // console.log(requestFile);
+        let fileSize: bigint = decodedPermission.fileSize;
+        let permissionRequest: string[] = decodedPermission.payload.split('/');
+
+        let response: number = decodedResponse.response;
+        let responsePayload: string[] = decodedResponse.payload.split('/');
 
         switch (command) {
             case Commands.REGISTER:
@@ -70,24 +72,39 @@ class Program {
             case Commands.GROUPCHAT:
                 Program.ProcessGroupchat(socket, nonce, request, command);
                 break;
-            // case Commands.SEND:
-            //     Program.ProcessFile(socket, nonce, fileSize, requestFile, command)
-            //     break;
+            case Commands.SEND:
+                Program.ProcessPermission(socket, nonce, fileSize, permissionRequest, command);
+                break;
+            case Commands.RESPOND:
+                Program.ProcessResponse(socket, nonce, response, responsePayload, command);
+                break;
             default:
+                FileService.SendFile(data);
                 break;
         }
     }
 
-    // static ProcessFile = (socket: net.Socket, nonce: number, filesize: bigint, requestFile: string[], command: number): void => {
-    //     if (requestFile.length == 3) {
-    //         const receiver: string = requestFile[0];
-    //         const fileName: string = requestFile[1];
-    //         const receiverAddress: string = requestFile[2];
+    static ProcessPermission = (socket: net.Socket, nonce: number, filesize: bigint, requestFile: string[], command: number): void => {
+        if (requestFile.length == 3) {
+            const receiver: string = requestFile[0];
+            const fileName: string = requestFile[1];
+            const receiverAddress: string = requestFile[2];
 
-    //         let result: boolean = FileService.GetPermission(socket, filesize, receiver, fileName, receiverAddress);
-    //         // Program.Response(socket,result, nonce, command);
-    //     }
-    // }
+            FileService.GetPermission(socket, filesize, receiver, fileName, receiverAddress);
+            // let result: true | string = FileService.GetPermission(socket, filesize, receiver, fileName, receiverAddress);
+            // Program.Response(socket, result, nonce, command);
+        }
+    }
+
+    static ProcessResponse = (socket: net.Socket, nonce: number, response: number, responsePayload: string[], command: number): void => {
+        if (responsePayload.length == 3) {
+            const receiver: string = responsePayload[0];
+            const fileName: string = responsePayload[1];
+            const receiverAddress: string = responsePayload[2];
+
+            FileService.GetResponse(socket, response, receiver, fileName, receiverAddress);
+        }
+    }
 
 
 
@@ -178,6 +195,9 @@ class Program {
             case Commands.GROUPCHAT:
                 if (result == true) socket.write(Helpers.EncodeMessage(Commands.GROUPCHAT, nonce, MessageTypes.SUCCESS, ''));
                 else socket.write(Helpers.EncodeMessage(Commands.GROUPCHAT, nonce, MessageTypes.FAIL, `${result}`));
+            case Commands.SEND:
+                if (result == true) socket.write(Helpers.EncodeMessage(Commands.SEND, nonce, MessageTypes.SUCCESS, ''));
+                else socket.write(Helpers.EncodeMessage(Commands.SEND, nonce, MessageTypes.FAIL, `${result}`));
             default:
                 break;
         }
